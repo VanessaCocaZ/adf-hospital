@@ -1,0 +1,96 @@
+{
+	"name": "df_silver_diagnoses",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_Bronze_Diagnoses",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_Silver_Diagnoses",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "filterValidos"
+				},
+				{
+					"name": "derivedColumn4"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          diagnosis_id as string,",
+				"          admission_id as string,",
+				"          icd_code as string,",
+				"          diagnosis_description as string,",
+				"          severity as string",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: true,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(diagnosis_id = trim(diagnosis_id),",
+				"          admission_id = trim(admission_id),",
+				"          icd_code = trim(icd_code),",
+				"          diagnosis_description = trim(diagnosis_description),",
+				"          severity = trim(severity)) ~> derivedColumn1",
+				"derivedColumn1 derive(icd_code = regexReplace(regexReplace(regexReplace(regexReplace(regexReplace(regexReplace(regexReplace(regexReplace(regexReplace(regexReplace(upper(regexReplace(icd_code, ' *, *', ', ')), 'F32-9|F329', 'F32.9'), 'M54-5|M545', 'M54.5'), 'E11-9|E119', 'E11.9'), 'N39-0|N390', 'N39.0'), 'K21-9|K219', 'K21.9'), 'J45-909|J45909', 'J45.909'), 'C50-911|C50911', 'C50.911'), 'S72-001A|S72001A', 'S72.001A'), 'I-10|I10', 'I10'), 'R-51', 'R51'),",
+				"          severity = iif(",
+				"          isNull(severity) || severity == '',",
+				"          toString(null()),",
+				"          iif(lower(severity) == 'mild', 'Mild',",
+				"          iif(lower(severity) == 'moderate', 'Moderate',",
+				"          iif(lower(severity) == 'severe', 'Severe',",
+				"          iif(lower(severity) == 'critical', 'Critical', severity))))),",
+				"          diagnosis_description = iif(isNull(diagnosis_description) || diagnosis_description == '', toString(null()), diagnosis_description)) ~> derivedColumn2",
+				"derivedColumn2 filter(!isNull(diagnosis_id) && isInteger(diagnosis_id) &&",
+				"     !isNull(admission_id) && isInteger(admission_id) &&",
+				"     !isNull(icd_code) && icd_code != '') ~> filterValidos",
+				"filterValidos derive(diagnosis_id = toInteger(diagnosis_id),",
+				"          admission_id = toInteger(admission_id)) ~> derivedColumn4",
+				"derivedColumn4 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          diagnosis_id as integer,",
+				"          admission_id as integer,",
+				"          icd_code as string,",
+				"          diagnosis_description as string,",
+				"          severity as string",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          diagnosis_id,",
+				"          admission_id,",
+				"          icd_code,",
+				"          diagnosis_description,",
+				"          severity",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

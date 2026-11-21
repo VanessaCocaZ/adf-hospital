@@ -1,0 +1,98 @@
+{
+	"name": "df_silver_billing",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_Bronze_Billing",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_Silver_Billing",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "derivedColumn2"
+				},
+				{
+					"name": "filterValidos"
+				},
+				{
+					"name": "derivedColumn4"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          billing_id as string,",
+				"          admission_id as string,",
+				"          charge_type as string,",
+				"          amount as string,",
+				"          payment_status as string,",
+				"          payment_date as string",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: true,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1",
+				"source1 derive(billing_id = trim(billing_id),",
+				"          admission_id = trim(admission_id),",
+				"          charge_type = trim(charge_type),",
+				"          amount = trim(amount),",
+				"          payment_status = trim(payment_status),",
+				"          payment_date = trim(payment_date)) ~> derivedColumn1",
+				"derivedColumn1 derive(charge_type = iif(isNull(charge_type) || charge_type == '', toString(null()), iif(lower(charge_type) == 'lab test', 'Lab Test', iif(lower(charge_type) == 'consultation', 'Consultation', iif(lower(charge_type) == 'medication', 'Medication', iif(lower(charge_type) == 'imaging', 'Imaging', iif(lower(charge_type) == 'surgery', 'Surgery', iif(lower(charge_type) == 'room', 'Room', charge_type))))))),",
+				"          payment_status = iif(lower(payment_status) == 'paid', 'Paid', iif(lower(payment_status) == 'unpaid', 'Unpaid', iif(lower(payment_status) == 'pending', 'Pending', iif(lower(payment_status) == 'overdue', 'Overdue', payment_status)))),",
+				"          amount = regexReplace(regexReplace(amount, 'USD', ''), '[,$ ]', '')) ~> derivedColumn2",
+				"derivedColumn2 filter(!isNull(billing_id) && isInteger(billing_id) &&",
+				"     !isNull(admission_id) && isInteger(admission_id) &&",
+				"     !isNull(charge_type) && charge_type != '' &&",
+				"     !isNull(amount) && isDecimal(amount) &&",
+				"     !isNull(payment_status) && payment_status != '') ~> filterValidos",
+				"filterValidos derive(billing_id = toInteger(billing_id),",
+				"          admission_id = toInteger(admission_id),",
+				"          amount = toDecimal(amount, 12, 2),",
+				"          payment_date = iif(regexMatch(payment_date, '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'), toDate(payment_date, 'yyyy-MM-dd'), iif(regexMatch(payment_date, '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'), toDate(payment_date, 'MM/dd/yyyy'), iif(regexMatch(payment_date, '^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$'), toDate(payment_date, 'dd-MMM-yyyy'), iif(regexMatch(payment_date, '^[A-Za-z]+ [0-9]{1,2}, [0-9]{4}$'), toDate(payment_date, 'MMMM d, yyyy'), iif(regexMatch(payment_date, '^[0-9]{2}-[0-9]{2}-[0-9]{2}$'), toDate(concat(iif(toInteger(substring(payment_date, 7, 2)) <= 26, '20', '19'), substring(payment_date, 7, 2), '-', substring(payment_date, 1, 2), '-', substring(payment_date, 4, 2)), 'yyyy-MM-dd'), toDate(null()))))))) ~> derivedColumn4",
+				"derivedColumn4 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          billing_id as integer,",
+				"          admission_id as integer,",
+				"          charge_type as string,",
+				"          amount as decimal(12,2),",
+				"          payment_status as string,",
+				"          payment_date as date",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          billing_id,",
+				"          admission_id,",
+				"          charge_type,",
+				"          amount,",
+				"          payment_status,",
+				"          payment_date",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}

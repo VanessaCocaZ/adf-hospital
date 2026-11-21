@@ -1,0 +1,29 @@
+{
+	"name": "DS_Gold_Dim_Departamento",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQL_Hospital",
+			"type": "LinkedServiceReference"
+		},
+		"folder": {
+			"name": "Gold"
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [
+			{
+				"name": "departamento_key",
+				"type": "int",
+				"precision": 10
+			},
+			{
+				"name": "nombre_departamento",
+				"type": "nvarchar"
+			}
+		],
+		"typeProperties": {
+			"schema": "gold",
+			"table": "dim_departamento"
+		}
+	}
+}
