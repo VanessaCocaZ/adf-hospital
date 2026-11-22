@@ -10,6 +10,13 @@
 						"type": "DatasetReference"
 					},
 					"name": "source1"
+				},
+				{
+					"dataset": {
+						"referenceName": "DS_Silver_Admissions",
+						"type": "DatasetReference"
+					},
+					"name": "sourceAdmissions"
 				}
 			],
 			"sinks": [
@@ -23,6 +30,9 @@
 			],
 			"transformations": [
 				{
+					"name": "selectAdmissions"
+				},
+				{
 					"name": "derivedColumn1"
 				},
 				{
@@ -33,6 +43,9 @@
 				},
 				{
 					"name": "derivedColumn4"
+				},
+				{
+					"name": "existsAdmissions"
 				}
 			],
 			"scriptLines": [
@@ -48,6 +61,18 @@
 				"     validateSchema: true,",
 				"     isolationLevel: 'READ_UNCOMMITTED',",
 				"     format: 'table') ~> source1",
+				"source(output(",
+				"          admission_id as integer",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> sourceAdmissions",
+				"sourceAdmissions select(mapColumn(",
+				"          admission_id_ref = admission_id",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectAdmissions",
 				"source1 derive(billing_id = trim(billing_id),",
 				"          admission_id = trim(admission_id),",
 				"          charge_type = trim(charge_type),",
@@ -66,7 +91,10 @@
 				"          admission_id = toInteger(admission_id),",
 				"          amount = toDecimal(amount, 12, 2),",
 				"          payment_date = iif(regexMatch(payment_date, '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'), toDate(payment_date, 'yyyy-MM-dd'), iif(regexMatch(payment_date, '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'), toDate(payment_date, 'MM/dd/yyyy'), iif(regexMatch(payment_date, '^[0-9]{2}-[A-Za-z]{3}-[0-9]{4}$'), toDate(payment_date, 'dd-MMM-yyyy'), iif(regexMatch(payment_date, '^[A-Za-z]+ [0-9]{1,2}, [0-9]{4}$'), toDate(payment_date, 'MMMM d, yyyy'), iif(regexMatch(payment_date, '^[0-9]{2}-[0-9]{2}-[0-9]{2}$'), toDate(concat(iif(toInteger(substring(payment_date, 7, 2)) <= 26, '20', '19'), substring(payment_date, 7, 2), '-', substring(payment_date, 1, 2), '-', substring(payment_date, 4, 2)), 'yyyy-MM-dd'), toDate(null()))))))) ~> derivedColumn4",
-				"derivedColumn4 sink(allowSchemaDrift: true,",
+				"derivedColumn4, selectAdmissions exists(admission_id == admission_id_ref,",
+				"     negate:false,",
+				"     broadcast: 'auto')~> existsAdmissions",
+				"existsAdmissions sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     input(",
 				"          billing_id as integer,",
