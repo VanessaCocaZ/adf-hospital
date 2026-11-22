@@ -3,7 +3,7 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Execute Pipeline1",
+				"name": "sil",
 				"type": "ExecutePipeline",
 				"dependsOn": [],
 				"policy": {
@@ -11,6 +11,33 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
+					"pipeline": {
+						"referenceName": "silver",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "gol",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "sil",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "gold",
+						"type": "PipelineReference"
+					},
 					"waitOnCompletion": true
 				}
 			}
