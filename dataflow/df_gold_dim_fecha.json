@@ -1,0 +1,92 @@
+{
+	"name": "df_gold_dim_fecha",
+	"properties": {
+		"folder": {
+			"name": "Gold"
+		},
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "DS_Silver_Admissions",
+						"type": "DatasetReference"
+					},
+					"name": "source1"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "DS_Gold_Dim_Fecha",
+						"type": "DatasetReference"
+					},
+					"name": "sink1"
+				}
+			],
+			"transformations": [],
+			"scriptLines": [
+				"source(output(",
+				"          fecha_key as integer,",
+				"          fecha_completa as date,",
+				"          anio as short,",
+				"          trimestre as short,",
+				"          trimestre_nombre as string,",
+				"          mes as short,",
+				"          mes_nombre as string,",
+				"          mes_corto as string,",
+				"          semana_anio as short,",
+				"          dia_mes as short,",
+				"          dia_semana as short,",
+				"          dia_nombre as string,",
+				"          es_fin_de_semana as boolean",
+				"     ),",
+				"     allowSchemaDrift: false,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     query: 'SELECT YEAR(f.fecha)*10000+MONTH(f.fecha)*100+DAY(f.fecha) AS fecha_key, f.fecha AS fecha_completa, CAST(YEAR(f.fecha) AS smallint) AS anio, CAST(DATEPART(QUARTER,f.fecha) AS tinyint) AS trimestre, CONCAT(\\'T\\',DATEPART(QUARTER,f.fecha)) AS trimestre_nombre, CAST(MONTH(f.fecha) AS tinyint) AS mes, CHOOSE(MONTH(f.fecha),\\'Enero\\',\\'Febrero\\',\\'Marzo\\',\\'Abril\\',\\'Mayo\\',\\'Junio\\',\\'Julio\\',\\'Agosto\\',\\'Septiembre\\',\\'Octubre\\',\\'Noviembre\\',\\'Diciembre\\') AS mes_nombre, CHOOSE(MONTH(f.fecha),\\'Ene\\',\\'Feb\\',\\'Mar\\',\\'Abr\\',\\'May\\',\\'Jun\\',\\'Jul\\',\\'Ago\\',\\'Sep\\',\\'Oct\\',\\'Nov\\',\\'Dic\\') AS mes_corto, CAST(DATEPART(ISO_WEEK,f.fecha) AS tinyint) AS semana_anio, CAST(DAY(f.fecha) AS tinyint) AS dia_mes, CAST(((DATEDIFF(DAY,\\'19000101\\',f.fecha)%7+7)%7)+1 AS tinyint) AS dia_semana, CHOOSE(((DATEDIFF(DAY,\\'19000101\\',f.fecha)%7+7)%7)+1,\\'Lunes\\',\\'Martes\\',\\'Miercoles\\',\\'Jueves\\',\\'Viernes\\',\\'Sabado\\',\\'Domingo\\') AS dia_nombre, CAST(CASE WHEN ((DATEDIFF(DAY,\\'19000101\\',f.fecha)%7+7)%7)+1 IN (6,7) THEN 1 ELSE 0 END AS bit) AS es_fin_de_semana FROM (SELECT DATEADD(DAY, a.n+10*b.n+100*c.n+1000*d.n,CAST(\\'20100101\\' AS date)) AS fecha FROM (VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) a(n) CROSS JOIN (VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) b(n) CROSS JOIN (VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) c(n) CROSS JOIN (VALUES(0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) d(n) WHERE a.n+10*b.n+100*c.n+1000*d.n <= DATEDIFF(DAY,\\'20100101\\',\\'20301231\\')) f',",
+				"     format: 'query') ~> source1",
+				"source1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          fecha_key as integer,",
+				"          fecha_completa as date,",
+				"          anio as integer,",
+				"          trimestre as integer,",
+				"          trimestre_nombre as string,",
+				"          mes as integer,",
+				"          mes_nombre as string,",
+				"          mes_corto as string,",
+				"          semana_anio as integer,",
+				"          dia_mes as integer,",
+				"          dia_semana as integer,",
+				"          dia_nombre as string,",
+				"          es_fin_de_semana as boolean",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     format: 'table',",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError',",
+				"     mapColumn(",
+				"          fecha_key,",
+				"          fecha_completa,",
+				"          anio,",
+				"          trimestre,",
+				"          trimestre_nombre,",
+				"          mes,",
+				"          mes_nombre,",
+				"          mes_corto,",
+				"          semana_anio,",
+				"          dia_mes,",
+				"          dia_semana,",
+				"          dia_nombre,",
+				"          es_fin_de_semana",
+				"     )) ~> sink1"
+			]
+		}
+	}
+}
